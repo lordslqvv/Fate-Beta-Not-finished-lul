@@ -1,0 +1,57 @@
+-- Silent Aim Function
+local function silentAim(target)
+    local player = game.Players.LocalPlayer
+    local mouse = player:GetMouse()
+
+    -- Calculate the aim direction
+    local aimDirection = (target.Position - player.Character.Head.Position).unit
+
+    -- Apply prediction to the aim direction
+    local velocity = target.Velocity
+    local predictionOffset = velocity * silentAimPrediction
+    aimDirection = aimDirection + predictionOffset
+
+    -- Calculate the pitch and yaw angles
+    local pitch = math.asin(-aimDirection.Y)
+    local yaw = math.atan2(-aimDirection.X, -aimDirection.Z)
+
+    -- Set the aim angles
+    player.Character.Humanoid.AutoRotate = false
+    player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position) * CFrame.Angles(0, yaw, 0)
+    mouse.Target = target
+
+    -- Fire when the aim direction is within the hitchance threshold
+    if math.random() <= silentAimHitchance then
+        mouse1click()
+    end
+end
+
+-- Main Loop
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == silentAimKeybind and aimbotEnabled then
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+
+        -- Get the nearest visible player
+        local target = nil
+        local maxDistance = math.huge
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= player and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                local distance = (player.Character.Head.Position - p.Character.Head.Position).magnitude
+                if distance < maxDistance then
+                    local ray = Ray.new(player.Character.Head.Position, (p.Character.Head.Position - player.Character.Head.Position).unit * distance)
+                    local part, position = workspace:FindPartOnRay(ray, player.Character)
+                    if part and part:IsDescendantOf(p.Character) and part.Name == "Head" then
+                        target = p.Character.Head
+                        maxDistance = distance
+                    end
+                end
+            end
+        end
+
+        -- Perform silent aim if a target is found
+        if target then
+            silentAim(target)
+        end
+    end
+end)
